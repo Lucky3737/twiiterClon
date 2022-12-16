@@ -24,28 +24,44 @@ const initializeDBAndServer = async () => {
   }
 };
 initializeDBAndServer();
+let covertUser = (dbObject) => {
+  return {
+    userId: dbObject.user_id,
+    name: dbObject.name,
+    username: dbObject.username,
+    password: dbObject.password,
+    gender: dbObject.gender,
+  };
+};
 
 app.post("/register/", async (request, response) => {
   const { username, password, name, gender } = request.body;
-  const { userId } = request.params;
-  let hashedPassword = await bcrypt.hashSync(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   let registerUser = `
   select * from user where username="${username}"
   `;
-  let users = await db.get(registerUser);
+  let usersDetails = await db.get(registerUser);
+  console.log(usersDetails);
   try {
-    if (users === undefined) {
-      let createUser = `
-      INSERT INTO 
-      user (name,username,password,gender)
-      VALUES ("${username}","${hashedPassword}","${name}","${gender}")
-      `;
-      let user = await db.run(createUser);
-      response.send("user updated");
+    if (usersDetails === undefined) {
+      const user = `
+          INSERT INTO user (username,password,name,gender){
+          VALUES ("${username}","${hashedPassword}","${name}","${gender}")
+          
+          `;
+      const updateDetails = await db.run(user);
+      const l = updateDetails.password;
+      if (l < 6) {
+        response.status(400);
+        response.send("Password is too short");
+      } else {
+        response.status(200);
+        response.send("User created successfully");
+      }
     } else {
       response.status(400);
-      response.send("User alredy exits");
+      response.send("User already exists");
     }
   } catch (e) {
     console.log(`Db error : ${e.message}`);
